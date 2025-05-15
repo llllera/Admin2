@@ -1,0 +1,116 @@
+name: Docker CI/CD
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  DOCKER_IMAGE: ghcr.io/llllera/docker_all/docker
+  APP_PORT: 60080
+  CONTAINER_PORT: 8109
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.DOCKER_IMAGE }}:latest
+            ${{ env.DOCKER_IMAGE }}:${{ github.sha }}
+
+  test:
+    needs: build-and-push   # теперь тест зависит от сборки
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres
+        env:
+          POSTGRES_USER: kubsu
+          POSTGRES_PASSWORD: kubsu
+          POSTGRES_DB: kubsu
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          
+      - name: Install dependencies
+        run: |
+          cd .
+          pip install .[test]
+          pip install pytest httpx
+
+      - name: Debug Python path
+        run: |
+          echo "PYTHONPATH: $PYTHONPATH"
+          echo "Current directory: $(pwd)"
+          ls -la
+
+      - name: Run tests
+        run: |
+          cd .
+          PYTHONPATH=$(pwd) pytest -v tests
+
+  deploy:
+    needs: test
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup SSH key
+        shell: powershell
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE }}
+        run: |
+          $keyPath = "$env:USERPROFILE\.ssh\kub_key"
+          [System.IO.File]::WriteAllText($keyPath, $env:SSH_KEY)
+        
+          $acl = Get-Acl $keyPath
+          $acl.SetAccessRuleProtection($true, $false)
+          $acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) }
+          $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            "$env:USERNAME", "FullControl", "Allow"
+          )
+          $acl.AddAccessRule($rule)
+          Set-Acl $keyPath $acl
+        
+          icacls $keyPath
+
+      - name: Deploy to server
+        shell: powershell
+        run: |
+          $image = "${{ env.DOCKER_IMAGE }}"
+          $appPort = "${{ env.APP_PORT }}"
+          $containerPort = "${{ env.CONTAINER_PORT }}"
+          $token = "${{ secrets.GITHUB_TOKEN }}"
+    
+          $commands = @"
+          podman login ghcr.io -u ${{ github.actor }} -p $token
+          podman pull ${image}:latest
+          podman stop app  echo "No container to stop"
+          podman rm app  echo "No container to remove"
+          podman run -d --name app --net=host ${image}:latest 
+          "@
+    
+
+          
+          ssh -v -i "$env:USERPROFILE\.ssh\kub_key" -o StrictHostKeyChecking=no -p 58529 tereshkova@kubsu.tyvik.ru $commands
