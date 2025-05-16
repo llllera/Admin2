@@ -81,40 +81,25 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Setup SSH key
-        shell: powershell
+        shell: bash
         env:
           SSH_KEY: ${{ secrets.SSH_PRIVATE }}
         run: |
-          $keyPath = "$env:USERPROFILE\.ssh\kub_key"
-          [System.IO.File]::WriteAllText($keyPath, $env:SSH_KEY)
-        
-          $acl = Get-Acl $keyPath
-          $acl.SetAccessRuleProtection($true, $false)
-          $acl.Access | ForEach-Object { $acl.RemoveAccessRule($_) }
-          $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-            "$env:USERNAME", "FullControl", "Allow"
-          )
-          $acl.AddAccessRule($rule)
-          Set-Acl $keyPath $acl
-        
-          icacls $keyPath
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/kub_key
+          chmod 600 ~/.ssh/kub_key
+          ssh-keyscan -H kubsu.tyvik.ru >> ~/.ssh/known_hosts
 
       - name: Deploy to server
-        shell: powershell
+        shell: bash
         run: |
-          $image = "${{ env.DOCKER_IMAGE }}"
-          $appPort = "${{ env.APP_PORT }}"
-          $containerPort = "${{ env.CONTAINER_PORT }}"
-          $token = "${{ secrets.GITHUB_TOKEN }}"
-    
-          $commands = @"
-          podman login ghcr.io -u ${{ github.actor }} -p $token
-          podman pull ${image}:latest
-          podman stop app  echo "No container to stop"
-          podman rm app  echo "No container to remove"
-          podman run -d --name app --net=host ${image}:latest 
-          "@
+          ssh -i ~/.ssh/kub_key -p 58529 tereshkova@kubsu.tyvik.ru "
+          echo '${{ secrets.GITHUB_TOKEN }}' | podman login ghcr.io -u '${{ github.actor }}' --password-stdin
+          podman pull '${{ env.DOCKER_IMAGE }}:latest'
+          podman stop app || true
+          podman rm app || true
+          podman run -d --name app -p '${{ env.APP_PORT }}:${{ env.CONTAINER_PORT }}' '${{ env.DOCKER_IMAGE }}:latest'"
     
 
           
-          ssh -v -i "$env:USERPROFILE\.ssh\kub_key" -o StrictHostKeyChecking=no -p 58529 tereshkova@kubsu.tyvik.ru $commands
+          ssh -i ~/.ssh/kub_key -o StrictHostKeyChecking=no -p 58529 tereshkova@kubsu.tyvik.ru "$SSH_COMMANDS"
