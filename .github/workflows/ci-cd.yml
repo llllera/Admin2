@@ -27,7 +27,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v4
         with:
-          context: docker_all/
+          context: .
           file: docker_all/Dockerfile  # Явный путь к Dockerfile
           push: true
           tags: |
