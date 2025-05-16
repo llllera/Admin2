@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 env:
-  DOCKER_IMAGE: ghcr.io/llllera/Admin2
+  DOCKER_IMAGE: ghcr.io/llllera/admin2
   APP_PORT: 60080
   CONTAINER_PORT: 8109
 
