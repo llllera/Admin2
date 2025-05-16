@@ -93,18 +93,19 @@ jobs:
            # Для использования в следующих шагах
            echo "SSH_DIR=$SSH_DIR" >> $GITHUB_ENV
            echo "Ключ сохранён в: $SSH_DIR/kub_key"
-           ssh-keyscan -H kubsu.tyvik.ru >> ~/.ssh/known_hosts
-
-      - name: Deploy to server
-        shell: bash
-        run: |
-          ssh -i ~/.ssh/kub_key -p 58529 tereshkova@kubsu.tyvik.ru "
-          echo '${{ secrets.GITHUB_TOKEN }}' | podman login ghcr.io -u '${{ github.actor }}' --password-stdin
-          podman pull '${{ env.DOCKER_IMAGE }}:latest'
-          podman stop app || true
-          podman rm app || true
-          podman run -d --name app -p '${{ env.APP_PORT }}:${{ env.CONTAINER_PORT }}' '${{ env.DOCKER_IMAGE }}:latest'"
-    
-
+           # Команды для выполнения на сервере
+           SSH_COMMANDS=$(cat <<EOF
+           echo '${{ secrets.GITHUB_TOKEN }}' | podman login ghcr.io -u '${{ github.actor }}' --password-stdin
+           podman pull '${{ env.DOCKER_IMAGE }}:latest'
+           podman stop app || true
+           podman rm app || true
+           podman run -d --name app -p '${{ env.APP_PORT }}:${{ env.CONTAINER_PORT }}' '${{ env.DOCKER_IMAGE }}:latest'
+           EOF
+           )
           
-          ssh -i "$SSH_DIR/kub_key" -o StrictHostKeyChecking=no -p 58529 tereshkova@kubsu.tyvik.ru "$SSH_COMMANDS"
+           # Подключение с использованием сохранённого ключа
+           ssh -i "$SSH_KEY_PATH" \
+              -o StrictHostKeyChecking=no \
+              -p 58529 \
+              tereshkova@kubsu.tyvik.ru \
+              "$SSH_COMMANDS"
