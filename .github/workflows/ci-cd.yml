@@ -85,7 +85,7 @@ jobs:
         env:
           SSH_KEY: ${{ secrets.SSH_PRIVATE }}
         run: |
-          SSH_DIR="$GITHUB_WORKSPACE/ssh_config"
+          SSH_DIR="/home/actions-runner/.ssh"
           mkdir -p "$SSH_DIR"
           echo "$SSH_KEY" > "$SSH_DIR/kub_key"
           chmod 600 "$SSH_DIR/kub_key"
