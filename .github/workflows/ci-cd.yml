@@ -85,11 +85,15 @@ jobs:
         env:
           SSH_KEY: ${{ secrets.SSH_PRIVATE }}
         run: |
-          SSH_DIR="/home/actions-runner/.ssh"
-          mkdir -p "$SSH_DIR"
-          echo "$SSH_KEY" > "$SSH_DIR/kub_key"
-          chmod 600 "$SSH_DIR/kub_key"
-          ssh-keyscan -H kubsu.tyvik.ru >> ~/.ssh/known_hosts
+           SSH_DIR="$RUNNER_TEMP/.ssh"
+           mkdir -p "$SSH_DIR"
+           echo "${{ secrets.SSH_PRIVATE }}" > "$SSH_DIR/kub_key"
+           chmod 600 "$SSH_DIR/kub_key"
+          
+           # Для использования в следующих шагах
+           echo "SSH_DIR=$SSH_DIR" >> $GITHUB_ENV
+           echo "Ключ сохранён в: $SSH_DIR/kub_key"
+           ssh-keyscan -H kubsu.tyvik.ru >> ~/.ssh/known_hosts
 
       - name: Deploy to server
         shell: bash
