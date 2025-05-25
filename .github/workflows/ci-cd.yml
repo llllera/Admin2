@@ -99,7 +99,7 @@ jobs:
            podman pull '${{ env.DOCKER_IMAGE }}:latest'
            podman stop app || true
            podman rm app || true
-           podman run -d --name app -p '${{ env.APP_PORT }}:${{ env.CONTAINER_PORT }}' '${{ env.DOCKER_IMAGE }}:latest'
+           podman run -d --name app -p --network=host '${{ env.DOCKER_IMAGE }}:latest'
            EOF
            )
           
