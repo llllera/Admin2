@@ -101,8 +101,7 @@ jobs:
            podman rm app || true
            podman run -d --name app --network=host '${{ env.DOCKER_IMAGE }}:latest'
            podman ps -a
-           podman logs app  
-           ss -tulnp | grep :8109
+           
            EOF
            )
           
