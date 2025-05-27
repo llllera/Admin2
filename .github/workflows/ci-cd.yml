@@ -104,7 +104,7 @@ jobs:
            )
           
            # Подключение с использованием сохранённого ключа
-           ssh -i "$SSH_DIR/kub_key" \
+           ssh -v -i "$SSH_DIR/kub_key" \
               -o StrictHostKeyChecking=no \
               -p 58529 \
               tereshkova@kubsu.tyvik.ru \
