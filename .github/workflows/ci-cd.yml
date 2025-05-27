@@ -104,7 +104,7 @@ jobs:
            )
           
            # Подключение с использованием сохранённого ключа
-           ssh -v -i "~/.ssh/id_ed25519" \
+           ssh -v -i "SSH_KEY_PATH" \
               -o StrictHostKeyChecking=no \
               -p 58529 \
               tereshkova@kubsu.tyvik.ru \
