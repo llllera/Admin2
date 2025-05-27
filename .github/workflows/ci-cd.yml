@@ -100,6 +100,7 @@ jobs:
            podman stop app || true
            podman rm app || true
            podman run -d --name app --network=host '${{ env.DOCKER_IMAGE }}:latest'
+           podman ps -a
            EOF
            )
           
